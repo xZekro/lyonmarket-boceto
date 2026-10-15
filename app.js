@@ -292,8 +292,41 @@
     // Cada cinta avanza sola, se detiene con el puntero encima y las flechas la adelantan o retroceden un par de marcas.
     const cintas = [filaLogos, filaFotos].map(ul => ({ ul, x: 0, pendiente: 0, vel: +ul.dataset.vel, quieta: false, pista: ul.closest(".marcas__pista") }));
     cintas.forEach(c => {
-      c.pista.addEventListener("pointerenter", () => { c.quieta = true; });
-      c.pista.addEventListener("pointerleave", () => { c.quieta = false; });
+      // Deslizar con el dedo: la cinta sigue al dedo y al soltar sigue un poco por inercia. Si hubo arrastre, el toque no abre la marca.
+      const ventana = c.ul.parentElement;
+      let toque = null;
+      ventana.addEventListener("pointerdown", e => {
+        if (e.button > 0) return;
+        toque = { id: e.pointerId, x: e.clientX, y: e.clientY, ult: e.clientX, t: performance.now(), vel: 0, movio: false };
+        c.quieta = true; c.pendiente = 0;
+      });
+      ventana.addEventListener("pointermove", e => {
+        if (!toque || e.pointerId !== toque.id) return;
+        const dx = e.clientX - toque.ult, ahora = performance.now();
+        if (!toque.movio) {
+          if (Math.abs(e.clientX - toque.x) < 6) return;
+          if (Math.abs(e.clientY - toque.y) > Math.abs(e.clientX - toque.x)) { toque = null; c.quieta = false; return; } // era scroll vertical
+          toque.movio = true; ventana.setPointerCapture(e.pointerId); ventana.classList.add("arrastrando");
+        }
+        c.x += dx;
+        toque.vel = dx / Math.max(8, ahora - toque.t) * 1000; toque.ult = e.clientX; toque.t = ahora;
+        if (!enMarcha) mover(performance.now());
+      });
+      const soltar = e => {
+        if (!toque || e.pointerId !== toque.id) return;
+        if (toque.movio) {
+          c.pendiente = Math.max(-1600, Math.min(1600, toque.vel * .28));
+          ventana.addEventListener("click", ev => { ev.preventDefault(); ev.stopPropagation(); }, { capture: true, once: true });
+          setTimeout(() => { c.quieta = e.pointerType === "mouse" && ventana.matches(":hover"); }, 0);
+        } else c.quieta = e.pointerType === "mouse";
+        ventana.classList.remove("arrastrando");
+        toque = null;
+        if (!enMarcha) mover(performance.now());
+      };
+      ventana.addEventListener("pointerup", soltar);
+      ventana.addEventListener("pointercancel", soltar);
+      c.pista.addEventListener("pointerenter", e => { if (e.pointerType === "mouse") c.quieta = true; });
+      c.pista.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") c.quieta = false; });
       c.pista.addEventListener("focusin", () => { c.quieta = true; });
       c.pista.addEventListener("focusout", () => { c.quieta = false; });
       c.pista.querySelectorAll("[data-mover]").forEach(b => b.addEventListener("click", () => {

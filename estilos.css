@@ -164,18 +164,18 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 .portada__acciones { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 2rem; }
 
 /* Categorías: barra compacta en ámbar */
-.categorias { background: var(--ambar); color: var(--tinta); position: relative; z-index: 2; }
+.categorias { background: var(--grafito-2); color: var(--crema); position: relative; z-index: 2; border-top: 1px solid rgb(255 178 26 / .18); border-bottom: 1px solid rgb(255 178 26 / .18); }
 .categorias__lista { list-style: none; margin: 0; padding: 0 var(--sangria); display: flex; gap: 0; overflow-x: auto; scrollbar-width: none; }
 .categorias__lista::-webkit-scrollbar { display: none; }
 .categorias__lista li { flex: 1 0 auto; }
-.categorias__lista li + li { border-left: 1px solid rgb(28 19 9 / .22); }
+.categorias__lista li + li { border-left: 1px solid rgb(255 178 26 / .16); }
 .categorias__lista a {
   display: flex; align-items: baseline; justify-content: center; gap: .6rem; min-height: 3.5rem; padding: .9rem 1.25rem;
   text-decoration: none; transition: background-color .3s var(--sale);
 }
-.categorias__lista a:hover { background: var(--ambar-claro); }
+.categorias__lista a:hover { background: rgb(255 178 26 / .1); color: var(--ambar); }
 .categorias__nombre { font: 800 1.35rem/1 var(--display); font-stretch: 75%; font-variation-settings: "wdth" 75; }
-.categorias__n { font: 700 .82rem/1 var(--texto); font-variant-numeric: tabular-nums; color: var(--tinta-ambar); }
+.categorias__n { font: 700 .82rem/1 var(--texto); font-variant-numeric: tabular-nums; color: var(--ambar); }
 
 /* Encabezado de secciones */
 .seccion__cabeza { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: .75rem 2rem; margin-bottom: clamp(1.5rem, 3vw, 2.5rem); }
@@ -361,7 +361,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
   position: relative;
 }
 .marcas__ventana {
-  overflow: hidden; padding: 1rem 0;
+  overflow: hidden; padding: 1rem 0; touch-action: pan-y; cursor: grab; user-select: none; -webkit-user-select: none;
   mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
 }
 .marcas__flecha {
@@ -375,6 +375,8 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 .marcas__flecha:hover { background: #000; transform: scale(1.08); }
 .marcas__flecha--izq { left: max(.75rem, calc(var(--sangria) * .5)); }
 .marcas__flecha--der { right: max(.75rem, calc(var(--sangria) * .5)); }
+.marcas__ventana.arrastrando { cursor: grabbing; }
+.marcas__ventana img { -webkit-user-drag: none; pointer-events: none; }
 .marcas__pista + .marcas__pista { margin-top: clamp(.5rem, 2vw, 1.5rem); }
 .marcas__fila {
   list-style: none; margin: 0; padding: 0; display: flex; align-items: flex-start; gap: clamp(1.5rem, 3vw, 3rem); width: max-content;
