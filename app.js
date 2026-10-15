@@ -260,28 +260,63 @@
   const nombreMarca = k => Object.entries(marcasCat.get(k)?.nombres || { [k]: 1 }).sort((a, b) => b[1] - a[1])[0][0];
   const cuenta = n => n + (n === 1 ? " producto" : " productos");
 
-  const filaLogos = $("#marcas-logos"), filaNombres = $("#marcas-nombres");
+  const filaLogos = $("#marcas-logos"), filaFotos = $("#marcas-nombres");
   if (filaLogos) {
     const LOGOS = [["raw", "raw.webp", "RAW"], ["the bulldog", "bulldog.webp", "The Bulldog Amsterdam"],
       ["lion rolling circus", "lion-rolling-circus.webp", "Lion Rolling Circus"], ["elements", "elements.webp", "Elements"],
       ["soulblime", "soulblime.webp", "Soulblime"]];
     const conLogo = new Set(LOGOS.map(l => l[0]));
-    const logos = LOGOS.map(([k, img, nombre]) => `<li><a class="logo" href="catalogo.html?marca=${encodeURIComponent(k)}">
-        <span class="logo__img"><img src="assets/marcas/${img}" alt="${nombre}" width="576" height="324"></span>
-        <span class="logo__pie"><b>${nombre}</b><small>${cuenta(marcasCat.get(k)?.n || 0)}</small></span></a></li>`);
-    const nombres = [...marcasCat.entries()].filter(([k]) => !conLogo.has(k)).sort((a, b) => b[1].n - a[1].n).slice(0, 18)
-      .map(([k, m]) => `<li><a class="logo logo--nombre" href="catalogo.html?marca=${encodeURIComponent(k)}">
-          <span class="logo__palabra">${esc(nombreMarca(k))}</span><small>${cuenta(m.n)}</small></a></li>`);
+    const teja = (k, img, nombre, foto) => `<li><a class="marca${foto ? " marca--foto" : ""}" href="catalogo.html?marca=${encodeURIComponent(k)}">
+        <span class="marca__img"><img src="${img}" alt="${foto ? "" : esc(nombre)}" width="${foto ? 600 : 576}" height="${foto ? 600 : 324}"></span>
+        <span class="marca__nombre">${esc(nombre)}</span></a></li>`;
+    const logos = LOGOS.map(([k, img, nombre]) => teja(k, "assets/marcas/" + img, nombre, false));
+    // Las marcas sin logo se muestran con su producto con más stock. Sin semillas en la portada (ver docs/legal.md).
+    const fotos = [...marcasCat.entries()].filter(([k]) => !conLogo.has(k)).sort((a, b) => b[1].n - a[1].n).slice(0, 16)
+      .map(([k]) => {
+        const p = catalogo.filter(x => claveMarca(x.marca) === k && x.img.startsWith("http") && x.sub !== "Semillas")
+          .sort((a, b) => (enStock(b) - enStock(a)) || (Math.min(b.stock, 999) - Math.min(a.stock, 999)))[0];
+        return p && teja(k, p.img, nombreMarca(k), true);
+      }).filter(Boolean);
     // Se repite hasta cubrir la pantalla y luego se duplica, así la cinta corre sin cortes. Las copias no se leen ni se enfocan.
     const llenar = (ul, items, anchoTeja) => {
       const veces = Math.max(1, Math.ceil(1.15 * Math.max(innerWidth, 1280) / (items.length * anchoTeja)));
       const copias = Array(veces * 2 - 1).fill(items).flat().join("")
         .replace(/<li>/g, '<li aria-hidden="true">').replace(/<a /g, '<a tabindex="-1" ');
       ul.innerHTML = items.join("") + copias;
-      ul.style.setProperty("--dur", Math.round(veces * items.length * 4.5) + "s");
+      ul.style.setProperty("--dur", Math.round(veces * items.length * 5) + "s");
     };
-    llenar(filaLogos, logos, 260);
-    llenar(filaNombres, nombres, 220);
+    llenar(filaLogos, logos, 340);
+    llenar(filaFotos, fotos, 260);
+  }
+
+  /* ---------- Reseñas: carrusel con foto (o ícono si no hay), estrellas y quién opinó ---------- */
+  const rielResenas = $("#riel-resenas");
+  if (rielResenas) {
+    // Reseñas reales de lyonmarket.cl. "foto": la que suba el cliente o la del producto; sin foto se muestra un ícono.
+    const IMG = id => `https://cdnx.jumpseller.com/lyonmarketstore/image/${id}/resize/400/400?1`;
+    const RESENAS = [
+      { autor: "Johanna M.", fecha: "22/01/2024", estrellas: 5, producto: "Cenicero Portátil", foto: IMG(37925440),
+        texto: "Súper buenos. No sale olor y son muy prácticos. La comunicación con Lyon Market fue muy fácil y los productos llegaron al día siguiente de haberlos comprado. Lo recomiendo." },
+      { autor: "Castiel Q.", fecha: "30/12/2024", estrellas: 5, producto: "Nexpod Sabores 5.000 Puffs", foto: IMG(58258373) },
+      { autor: "Matías I.", fecha: "27/04/2024", estrellas: 5, producto: "Pipa Pyrex", foto: IMG(44748998) },
+      { autor: "Nicole Q.", fecha: "16/10/2023", estrellas: 5, producto: "Bolso Anti Olor Mediano", foto: IMG(37533629) },
+      { autor: "Bruno M.", fecha: "25/06/2023", estrellas: 5, producto: "Cenicero Metálico", foto: IMG(35139389) },
+      { autor: "Matías I.", fecha: "27/04/2024", estrellas: 5, producto: "Bolsa de Rejillas Pyrex (5u)", foto: IMG(30676585) }
+    ];
+    const estrella = llena => `<svg viewBox="0 0 24 24"${llena ? ' class="llena"' : ""} aria-hidden="true"><path d="m12 3 2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 16.8l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8Z"/></svg>`;
+    const icono = `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c1.4-3.6 4.2-5.3 7.5-5.3s6.1 1.7 7.5 5.3"/></svg>`;
+    rielResenas.innerHTML = RESENAS.map(r => `<li><article class="resena">
+        <div class="resena__foto${r.foto ? "" : " resena__foto--icono"}">${r.foto ? `<img src="${r.foto}" alt="" loading="lazy" width="400" height="400">` : icono}</div>
+        <div class="resena__cuerpo">
+          <p class="estrellas" role="img" aria-label="${r.estrellas} de 5 estrellas">${[1, 2, 3, 4, 5].map(n => estrella(n <= r.estrellas)).join("")}</p>
+          <p class="resena__texto${r.texto ? "" : " resena__texto--corta"}">${r.texto ? "“" + esc(r.texto) + "”" : "Le puso " + r.estrellas + " estrellas a su compra."}</p>
+          <footer class="resena__pie">
+            <b>${esc(r.autor)}</b>
+            <a href="catalogo.html?q=${encodeURIComponent(r.producto)}">${esc(r.producto)}</a>
+            <span>${r.fecha} · Compra verificada</span>
+          </footer>
+        </div>
+      </article></li>`).join("");
   }
 
   /* ---------- Página de categoría: grilla con filtros ---------- */
@@ -493,7 +528,7 @@
   renderer.outputEncoding = T.sRGBEncoding;
   renderer.autoClear = false;
 
-  // Humo ámbar que el puntero empuja: una capa espesa detrás del pin y hebras más finas que suben por delante.
+  // Humo ámbar que el puntero empuja: nube espesa y hebras que suben, siempre por detrás del pin.
   const humoCam = new T.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   const humoUni = {
     uRes: { value: new T.Vector2(1, 1) }, uTime: { value: 0 }, uMouse: { value: new T.Vector2(.7, .5) },
@@ -536,7 +571,7 @@
     })));
     return escena;
   };
-  const humoAtras = capaHumo(false), humoDelante = capaHumo(true);
+  const humoAtras = capaHumo(false);
 
   // El pin: aro de metal dorado extruido, cara esmaltada con brillo que la recorre, reverso grabado.
   const scene = new T.Scene();
@@ -621,13 +656,15 @@
     if (movil) {
       giro.scale.setScalar(Math.min(1.25, (vH * .9) / LADO, (vW * .9) / LADO));
       baseY = vH * .01; giro.position.set(0, baseY, 0); centroX = .5; humoUni.uCenter.value.set(.5, .55);
+      texto.style.maxWidth = ""; portada.style.paddingLeft = "";
     } else {
-      const c = canvas.getBoundingClientRect(), tx = texto.getBoundingClientRect();
-      const pad = parseFloat(getComputedStyle(portada).paddingRight) || 0;
-      const izq = tx.right - c.left, der = w - pad * .5, espacio = Math.max(w * .3, der - izq);
-      const ladoPx = Math.min(espacio * .92, h * .86);
+      // El pin se apoya a la derecha; el texto se centra entre el borde izquierdo y donde empieza el pin de frente.
+      const ladoPx = Math.min(h * .86, w * .5), margen = Math.max(18, w * .045);
+      const izqPin = w - margen - ladoPx, ancho = Math.min(496, izqPin - 36);
+      texto.style.maxWidth = ancho + "px";
+      portada.style.paddingLeft = Math.max(18, (izqPin - ancho) / 2) + "px";
       giro.scale.setScalar((ladoPx / h) * vH / LADO);
-      centroX = (izq + espacio / 2) / w;
+      centroX = (izqPin + ladoPx / 2) / w;
       baseY = 0; giro.position.set((centroX - .5) * vW, 0, 0); humoUni.uCenter.value.set(centroX, .55);
     }
     portada.style.setProperty("--cx", centroX.toFixed(3));
@@ -702,7 +739,6 @@
     renderer.clear();
     renderer.render(humoAtras, humoCam);
     if (listo) renderer.render(scene, cam);
-    renderer.render(humoDelante, humoCam);
   }
 
   if (reduce) return;

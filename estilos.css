@@ -140,7 +140,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
   display: grid; grid-template-columns: minmax(0, 31rem) minmax(0, 1fr); align-items: center;
   min-height: min(50rem, calc(100svh - 7.5rem));
   touch-action: pan-y;
-  padding: clamp(2rem, 5vw, 4rem) max(var(--sangria), calc(50vw - 39rem));
+  padding: clamp(2rem, 5vw, 4rem) var(--sangria);
   background: radial-gradient(120% 90% at 72% 0%, #3a2610 0%, var(--grafito) 62%);
 }
 .portada__cono {
@@ -204,6 +204,15 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
   background: radial-gradient(70% 55% at 50% 0%, rgb(255 190 70 / .38), transparent 70%), linear-gradient(180deg, #e9e3d6, var(--mylar) 55%, #cfcac0);
 }
 .estante--mylar .seccion__cabeza p { color: #4a3d2c; }
+.estante--mostaza {
+  color: var(--tinta);
+  background:
+    radial-gradient(60% 70% at 85% 0%, rgb(255 236 170 / .55), transparent 70%),
+    linear-gradient(180deg, #f2c75c 0%, #e8b444 55%, #dca232 100%);
+}
+.estante--mostaza .seccion__cabeza h2 { color: #2b1902; }
+.estante--mostaza .seccion__cabeza p { color: #46300a; }
+.estante--mostaza .placa { box-shadow: 0 1px 0 rgb(255 255 255 / .9) inset, 0 14px 30px -16px rgb(90 55 0 / .6); }
 .riel {
   list-style: none; margin: 0 calc(var(--sangria) * -1); padding: .5rem var(--sangria) 1.5rem;
   display: grid; grid-auto-flow: column; grid-auto-columns: clamp(15rem, 23vw, 19rem); gap: clamp(.9rem, 1.6vw, 1.4rem);
@@ -303,63 +312,74 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 }
 .placa__ley { font-size: .78rem; color: #6b5838; border-top: 1px solid #e7dfcf; padding-top: .55rem; margin-top: .55rem; }
 
-/* Reseñas */
+/* Reseñas: carrusel de tarjetas con foto (o ícono), estrellas y quién opinó */
 .resenas {
-  padding: clamp(4rem, 7vw, 6rem) var(--sangria);
-  color: var(--tinta);
-  background: radial-gradient(60% 70% at 85% 0%, rgb(255 190 70 / .35), transparent 70%), linear-gradient(180deg, #e9e3d6, var(--mylar) 60%, #cfcac0);
+  padding: clamp(4rem, 7vw, 6rem) var(--sangria) clamp(3rem, 6vw, 4.5rem); color: var(--crema);
+  background: radial-gradient(50% 70% at 85% 0%, rgb(255 160 30 / .16), transparent 70%), var(--grafito);
 }
-.resenas--oscuro { color: var(--crema); background: radial-gradient(50% 70% at 85% 0%, rgb(255 160 30 / .14), transparent 70%), var(--grafito); }
-.resenas--oscuro footer { color: var(--crema-2) !important; }
-.resenas h2 { font-size: clamp(2rem, 4.2vw, 3.2rem); margin-bottom: 2.5rem; }
-.resenas__lista { display: grid; grid-template-columns: 1.35fr 1fr; gap: clamp(1.5rem, 4vw, 4rem); align-items: start; }
-.resenas blockquote { margin: 0; }
-.resenas blockquote p { font: 700 clamp(1.4rem, 2.6vw, 2.2rem)/1.15 var(--display); letter-spacing: -.02em; }
-.resenas blockquote + blockquote p { font-size: clamp(1.2rem, 2vw, 1.6rem); }
-.resenas footer { margin-top: 1rem; font-size: .9rem; color: #5b4a30; }
+.resenas .seccion__cabeza p { color: var(--crema-2); }
+.resenas .flecha { border-color: rgb(247 236 215 / .5); color: var(--crema); }
+.resenas .flecha:hover { background: var(--crema); color: var(--tinta); }
+.riel--resenas { grid-auto-columns: clamp(17rem, 27vw, 22rem); }
+.resena {
+  display: flex; flex-direction: column; height: 100%; overflow: hidden; border-radius: var(--radio);
+  background: var(--placa); color: var(--tinta);
+  box-shadow: 0 1px 0 rgb(255 255 255 / .9) inset, 0 16px 34px -18px rgb(0 0 0 / .8);
+  transition: transform .5s var(--sale), box-shadow .5s var(--sale);
+}
+.resena:hover { transform: translateY(-4px); box-shadow: 0 22px 44px -18px rgb(232 138 0 / .7), 0 0 0 2px var(--ambar); }
+.resena__foto { aspect-ratio: 16 / 10; background: #fff; display: grid; place-items: center; }
+.resena__foto img { width: 100%; height: 100%; object-fit: contain; padding: 6%; }
+.resena__foto--icono { background: radial-gradient(60% 70% at 50% 40%, #ffd36b, var(--ambar) 70%); color: var(--tinta); }
+.resena__foto--icono svg { width: 34%; height: auto; stroke-width: 1.4; }
+.resena__cuerpo { display: flex; flex-direction: column; gap: .7rem; padding: 1.1rem 1.2rem 1.2rem; flex: 1; }
+.estrellas { display: flex; gap: .15rem; }
+.estrellas svg { width: 1.3rem; height: 1.3rem; stroke: #c98a0b; stroke-width: 1.4; fill: none; }
+.estrellas svg.llena { fill: var(--ambar); }
+.resena__texto { font: 700 1.08rem/1.35 var(--texto); }
+.resena__texto--corta { font-weight: 600; color: #5b4a30; }
+.resena__pie { margin-top: auto; padding-top: .8rem; border-top: 1px solid #e7dfcf; display: grid; gap: .15rem; font-size: .88rem; color: #5b4a30; }
+.resena__pie b { color: var(--tinta); font-size: 1rem; }
+.resena__pie a { color: var(--tinta); font-weight: 600; }
+.resena__pie a:hover { color: var(--magenta-hondo); }
 
-/* Marcas: dos cintas que corren en sentido contrario; se detienen al pasar el puntero */
+/* Marcas: dos cintas que corren en sentido contrario, de borde a borde; se detienen al pasar el puntero */
 .marcas {
   padding: clamp(4rem, 7vw, 6rem) 0 clamp(3.5rem, 6vw, 5rem); overflow: hidden; color: var(--tinta);
-  background: radial-gradient(60% 70% at 50% 0%, rgb(255 190 70 / .4), transparent 70%), linear-gradient(180deg, #e9e3d6, var(--mylar) 55%, #cfcac0);
+  background:
+    radial-gradient(60% 70% at 15% 0%, rgb(255 236 170 / .55), transparent 70%),
+    linear-gradient(180deg, #f2c75c 0%, #e8b444 55%, #dca232 100%);
 }
-.marcas__cabeza { padding: 0 var(--sangria); margin-bottom: clamp(1.75rem, 3vw, 2.5rem); display: grid; gap: .75rem; }
-.marcas__cabeza h2 { font-size: clamp(2.1rem, 4.6vw, 3.6rem); }
-.marcas__cabeza p { color: #4a3d2c; max-width: 38rem; }
+.marcas__cabeza { padding: 0 var(--sangria); margin-bottom: clamp(1.5rem, 3vw, 2.5rem); }
+.marcas__cabeza h2 { font-size: clamp(2.1rem, 4.6vw, 3.6rem); color: #2b1902; }
 .marcas__pista {
-  overflow: hidden; padding: .9rem 0;
-  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  overflow: hidden; padding: 1rem 0;
+  mask-image: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent);
 }
+.marcas__pista + .marcas__pista { margin-top: clamp(.5rem, 2vw, 1.5rem); }
 .marcas__fila {
-  list-style: none; margin: 0; padding: 0; display: flex; gap: 1rem; width: max-content;
+  list-style: none; margin: 0; padding: 0; display: flex; align-items: flex-start; gap: clamp(1.5rem, 3vw, 3rem); width: max-content;
   animation: cinta var(--dur, 40s) linear infinite;
 }
 .marcas__pista--vuelta .marcas__fila { animation-direction: reverse; }
 .marcas__pista:hover .marcas__fila, .marcas__pista:focus-within .marcas__fila { animation-play-state: paused; }
-@keyframes cinta { to { transform: translateX(calc(-50% - .5rem)); } }
-.logo {
-  display: grid; grid-template-rows: 1fr auto; width: 15rem; height: 11rem; padding: 1rem 1.1rem .9rem; border-radius: var(--radio);
-  text-decoration: none; color: var(--crema);
-  background: radial-gradient(55% 50% at 50% 42%, rgb(255 190 80 / .3), transparent 75%), radial-gradient(90% 80% at 50% 0%, rgb(255 178 26 / .12), transparent 70%), var(--grafito-2);
-  box-shadow: 0 1px 0 rgb(255 255 255 / .06) inset, 0 12px 26px -16px rgb(40 28 10 / .7);
-  transition: transform .5s var(--sale), box-shadow .5s var(--sale), background-color .3s;
+@keyframes cinta { to { transform: translateX(calc(-50% - clamp(.75rem, 1.5vw, 1.5rem))); } }
+.marca { display: grid; justify-items: center; gap: .8rem; width: clamp(14rem, 21vw, 19rem); text-decoration: none; color: #2b1902; }
+.marca__img { display: grid; place-items: center; width: 100%; height: clamp(8rem, 12vw, 11rem); }
+.marca__img img {
+  max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain;
+  filter: drop-shadow(0 10px 14px rgb(70 40 0 / .35));
+  transition: transform .6s var(--sale), filter .6s var(--sale);
 }
-.logo__img { display: grid; place-items: center; min-height: 0; }
-.logo__img img { max-height: 6.2rem; width: auto; max-width: 100%; object-fit: contain; transition: transform .6s var(--sale), filter .6s var(--sale); filter: drop-shadow(0 6px 10px rgb(0 0 0 / .45)); }
-.logo__pie { display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; padding-top: .55rem; border-top: 1px solid rgb(247 236 215 / .12); }
-.logo__pie b { font-size: .88rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.logo small { font-size: .78rem; color: var(--crema-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.logo:hover, .logo:focus-visible {
-  transform: translateY(-5px);
-  box-shadow: 0 1px 0 rgb(255 255 255 / .08) inset, 0 22px 40px -18px rgb(232 138 0 / .8), 0 0 0 2px var(--ambar);
+.marca__nombre {
+  font: 800 clamp(1.3rem, 1.9vw, 1.7rem)/1 var(--display); font-variation-settings: "wdth" 75; letter-spacing: 0;
+  text-align: center; text-wrap: balance;
 }
-.logo:hover .logo__img img { transform: scale(1.07) rotate(-1.5deg); }
-.logo--nombre { width: 13rem; height: 7.5rem; grid-template-rows: 1fr auto; align-items: center; }
-.logo__palabra {
-  font: 800 clamp(1.6rem, 2.4vw, 2.1rem)/1 var(--display); font-variation-settings: "wdth" 75; letter-spacing: -.01em;
-  color: var(--ambar); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.logo--nombre:nth-child(3n+2) .logo__palabra { color: var(--crema); }
+.marca:hover .marca__img img, .marca:focus-visible .marca__img img { transform: translateY(-6px) scale(1.06); filter: drop-shadow(0 18px 20px rgb(70 40 0 / .45)); }
+.marca:hover .marca__nombre { text-decoration: underline; text-decoration-thickness: 3px; text-underline-offset: .15em; }
+.marca--foto { width: clamp(11rem, 15vw, 14rem); }
+.marca--foto .marca__img { height: auto; aspect-ratio: 1; }
+.marca--foto .marca__img img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; background: #fff; box-shadow: 0 0 0 4px #fff; filter: drop-shadow(0 10px 16px rgb(70 40 0 / .35)); }
 
 /* Local */
 .local {
@@ -442,7 +462,8 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
   box-shadow: 0 10px 24px -8px rgb(0 0 0 / .6);
   transition: transform .4s var(--sale);
 }
-.wsp svg { width: 1.6rem; height: 1.6rem; stroke-width: 1.5; }
+.wsp svg { width: 1.75rem; height: 1.75rem; stroke-width: 1.6; }
+.wsp__fono { fill: currentColor; stroke: none; }
 .wsp:hover { transform: translateY(-3px) scale(1.04); }
 
 .aviso {
