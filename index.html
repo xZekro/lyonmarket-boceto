@@ -105,6 +105,7 @@
     </div>
   </div>
   <ul class="riel" id="riel-tabaqueria" data-seccion="tabaqueria"></ul>
+  <p class="advertencia">Venta exclusiva para mayores de 18 años.</p>
 </section>
 
 <section class="estante estante--mostaza" id="smokeshop" aria-labelledby="smokeshop-titulo">
@@ -118,6 +119,7 @@
     </div>
   </div>
   <ul class="riel" id="riel-smokeshop" data-seccion="smokeshop"></ul>
+  <p class="advertencia">Venta exclusiva para mayores de 18 años.</p>
 </section>
 
 <section class="estante estante--vapes" id="vaporizadores" aria-labelledby="vaporizadores-titulo">
@@ -165,10 +167,14 @@
     <h2 id="mar-titulo">Nuestras marcas</h2>
   </div>
   <div class="marcas__pista" aria-label="Marcas con logo">
-    <ul class="marcas__fila" id="marcas-logos"></ul>
+    <button class="marcas__flecha marcas__flecha--izq" type="button" data-mover="-1" aria-label="Ver marcas anteriores"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 6-6 6 6 6"/></svg></button>
+    <div class="marcas__ventana"><ul class="marcas__fila" id="marcas-logos" data-vel="-38"></ul></div>
+    <button class="marcas__flecha marcas__flecha--der" type="button" data-mover="1" aria-label="Ver más marcas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9.5 6 6 6-6 6"/></svg></button>
   </div>
-  <div class="marcas__pista marcas__pista--vuelta" aria-label="Más marcas, con uno de sus productos">
-    <ul class="marcas__fila" id="marcas-nombres"></ul>
+  <div class="marcas__pista" aria-label="Más marcas, con uno de sus productos">
+    <button class="marcas__flecha marcas__flecha--izq" type="button" data-mover="-1" aria-label="Ver marcas anteriores"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 6-6 6 6 6"/></svg></button>
+    <div class="marcas__ventana"><ul class="marcas__fila" id="marcas-nombres" data-vel="34"></ul></div>
+    <button class="marcas__flecha marcas__flecha--der" type="button" data-mover="1" aria-label="Ver más marcas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9.5 6 6 6-6 6"/></svg></button>
   </div>
 </section>
 

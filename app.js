@@ -64,6 +64,8 @@
   datos.productos.forEach(p => { porSlug[p.slug] = { ...porSlug[p.slug], ...p, nOpc: p.opciones.length, curado: true }; });
   catalogo.forEach((p, i) => { catalogo[i] = porSlug[p.slug]; });
   const enStock = p => p.stock > 0;
+  // Ley 21.642, art. 1: tabaco, vapeadores, sus líquidos y sus accesorios. Growshop no entra.
+  const SOLO_18 = new Set(["Tabaqueria", "Smokeshop", "Vaporizadores"]);
   const listas = {
     novedades: datos.novedades,
     tabaqueria: datos.secciones.Tabaqueria || [],
@@ -74,7 +76,7 @@
 
   function placa(p) {
     const li = document.createElement("li");
-    const agotado = !enStock(p), vape = p.cat === "Vaporizadores";
+    const agotado = !enStock(p), vape = p.cat === "Vaporizadores", mayores = SOLO_18.has(p.cat);
     const ops = p.nOpc ? `<span>${p.nOpc} ${vape ? "sabores" : "variantes"}</span>` : "";
     li.innerHTML = `
       <article class="placa${agotado ? " placa--agotada" : ""}">
@@ -92,7 +94,7 @@
               ? `<button class="placa__btn placa__btn--avisa" type="button" data-avisa="${p.slug}">Avísame</button>`
               : `<button class="placa__btn" type="button" data-agrega="${p.slug}">Agregar</button>`}
           </div>
-          ${vape ? `<p class="placa__ley">Venta exclusiva para mayores de 18 años.</p>` : ""}
+          ${mayores ? `<p class="placa__ley">Venta exclusiva para mayores de 18 años.</p>` : ""}
         </div>
       </article>`;
     return li;
@@ -268,7 +270,7 @@
     const conLogo = new Set(LOGOS.map(l => l[0]));
     const teja = (k, img, nombre, foto) => `<li><a class="marca${foto ? " marca--foto" : ""}" href="catalogo.html?marca=${encodeURIComponent(k)}">
         <span class="marca__img"><img src="${img}" alt="${foto ? "" : esc(nombre)}" width="${foto ? 600 : 576}" height="${foto ? 600 : 324}"></span>
-        <span class="marca__nombre">${esc(nombre)}</span></a></li>`;
+        ${foto ? `<span class="marca__nombre">${esc(nombre)}</span>` : ""}</a></li>`;
     const logos = LOGOS.map(([k, img, nombre]) => teja(k, "assets/marcas/" + img, nombre, false));
     // Las marcas sin logo se muestran con su producto con más stock. Sin semillas en la portada (ver docs/legal.md).
     const fotos = [...marcasCat.entries()].filter(([k]) => !conLogo.has(k)).sort((a, b) => b[1].n - a[1].n).slice(0, 16)
@@ -283,39 +285,69 @@
       const copias = Array(veces * 2 - 1).fill(items).flat().join("")
         .replace(/<li>/g, '<li aria-hidden="true">').replace(/<a /g, '<a tabindex="-1" ');
       ul.innerHTML = items.join("") + copias;
-      ul.style.setProperty("--dur", Math.round(veces * items.length * 5) + "s");
     };
     llenar(filaLogos, logos, 340);
     llenar(filaFotos, fotos, 260);
+
+    // Cada cinta avanza sola, se detiene con el puntero encima y las flechas la adelantan o retroceden un par de marcas.
+    const cintas = [filaLogos, filaFotos].map(ul => ({ ul, x: 0, pendiente: 0, vel: +ul.dataset.vel, quieta: false, pista: ul.closest(".marcas__pista") }));
+    cintas.forEach(c => {
+      c.pista.addEventListener("pointerenter", () => { c.quieta = true; });
+      c.pista.addEventListener("pointerleave", () => { c.quieta = false; });
+      c.pista.addEventListener("focusin", () => { c.quieta = true; });
+      c.pista.addEventListener("focusout", () => { c.quieta = false; });
+      c.pista.querySelectorAll("[data-mover]").forEach(b => b.addEventListener("click", () => {
+        const li = c.ul.firstElementChild, paso = li ? li.offsetWidth + parseFloat(getComputedStyle(c.ul).columnGap || 0) : 300;
+        c.pendiente -= +b.dataset.mover * paso * 2;
+        if (!enMarcha) mover(performance.now());
+      }));
+    });
+    let enMarcha = false, tCinta = performance.now(), cintaVisible = true;
+    function mover(t) {
+      const dt = Math.min(.05, (t - tCinta) / 1000); tCinta = t;
+      let sigue = false;
+      cintas.forEach(c => {
+        const mitad = (c.ul.scrollWidth + (parseFloat(getComputedStyle(c.ul).columnGap) || 0)) / 2;
+        if (!mitad) return;
+        const paso = c.pendiente * Math.min(1, dt * 7);
+        c.x += paso; c.pendiente -= paso;
+        if (!reduce && !c.quieta) c.x += c.vel * dt;
+        c.x = ((c.x % mitad) - mitad) % mitad;
+        c.ul.style.transform = `translate3d(${c.x}px,0,0)`;
+        if (Math.abs(c.pendiente) > .5) sigue = true;
+      });
+      enMarcha = (!reduce && cintaVisible) || sigue;
+      if (enMarcha) requestAnimationFrame(mover);
+    }
+    new IntersectionObserver(([e]) => {
+      cintaVisible = e.isIntersecting;
+      if (cintaVisible && !enMarcha) { tCinta = performance.now(); enMarcha = true; requestAnimationFrame(mover); }
+    }).observe($("#marcas"));
   }
 
   /* ---------- Reseñas: carrusel con foto (o ícono si no hay), estrellas y quién opinó ---------- */
   const rielResenas = $("#riel-resenas");
   if (rielResenas) {
-    // Reseñas reales de lyonmarket.cl. "foto": la que suba el cliente o la del producto; sin foto se muestra un ícono.
-    const IMG = id => `https://cdnx.jumpseller.com/lyonmarketstore/image/${id}/resize/400/400?1`;
+    // Reseñas reales de lyonmarket.cl. "foto": la que suba el cliente; si no hay, se muestra el ícono de usuario.
     const RESENAS = [
-      { autor: "Johanna M.", fecha: "22/01/2024", estrellas: 5, producto: "Cenicero Portátil", foto: IMG(37925440),
+      { autor: "Johanna M.", fecha: "22/01/2024", estrellas: 5, producto: "Cenicero Portátil",
         texto: "Súper buenos. No sale olor y son muy prácticos. La comunicación con Lyon Market fue muy fácil y los productos llegaron al día siguiente de haberlos comprado. Lo recomiendo." },
-      { autor: "Castiel Q.", fecha: "30/12/2024", estrellas: 5, producto: "Nexpod Sabores 5.000 Puffs", foto: IMG(58258373) },
-      { autor: "Matías I.", fecha: "27/04/2024", estrellas: 5, producto: "Pipa Pyrex", foto: IMG(44748998) },
-      { autor: "Nicole Q.", fecha: "16/10/2023", estrellas: 5, producto: "Bolso Anti Olor Mediano", foto: IMG(37533629) },
-      { autor: "Bruno M.", fecha: "25/06/2023", estrellas: 5, producto: "Cenicero Metálico", foto: IMG(35139389) },
-      { autor: "Matías I.", fecha: "27/04/2024", estrellas: 5, producto: "Bolsa de Rejillas Pyrex (5u)", foto: IMG(30676585) }
+      { autor: "Castiel Q.", fecha: "30/12/2024", estrellas: 5, producto: "Nexpod Sabores 5.000 Puffs" },
+      { autor: "Matías I.", fecha: "27/04/2024", estrellas: 5, producto: "Pipa Pyrex" },
+      { autor: "Nicole Q.", fecha: "16/10/2023", estrellas: 5, producto: "Bolso Anti Olor Mediano" },
+      { autor: "Bruno M.", fecha: "25/06/2023", estrellas: 5, producto: "Cenicero Metálico" },
+      { autor: "Matías I.", fecha: "27/04/2024", estrellas: 5, producto: "Bolsa de Rejillas Pyrex (5u)" }
     ];
     const estrella = llena => `<svg viewBox="0 0 24 24"${llena ? ' class="llena"' : ""} aria-hidden="true"><path d="m12 3 2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 16.8l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8Z"/></svg>`;
     const icono = `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c1.4-3.6 4.2-5.3 7.5-5.3s6.1 1.7 7.5 5.3"/></svg>`;
     rielResenas.innerHTML = RESENAS.map(r => `<li><article class="resena">
-        <div class="resena__foto${r.foto ? "" : " resena__foto--icono"}">${r.foto ? `<img src="${r.foto}" alt="" loading="lazy" width="400" height="400">` : icono}</div>
-        <div class="resena__cuerpo">
-          <p class="estrellas" role="img" aria-label="${r.estrellas} de 5 estrellas">${[1, 2, 3, 4, 5].map(n => estrella(n <= r.estrellas)).join("")}</p>
-          <p class="resena__texto${r.texto ? "" : " resena__texto--corta"}">${r.texto ? "“" + esc(r.texto) + "”" : "Le puso " + r.estrellas + " estrellas a su compra."}</p>
-          <footer class="resena__pie">
-            <b>${esc(r.autor)}</b>
-            <a href="catalogo.html?q=${encodeURIComponent(r.producto)}">${esc(r.producto)}</a>
-            <span>${r.fecha} · Compra verificada</span>
-          </footer>
-        </div>
+        <header class="resena__quien">
+          <span class="resena__avatar">${r.foto ? `<img src="${r.foto}" alt="" loading="lazy" width="96" height="96">` : icono}</span>
+          <span><b>${esc(r.autor)}</b><small>${r.fecha} · Compra verificada</small></span>
+        </header>
+        <p class="estrellas" role="img" aria-label="${r.estrellas} de 5 estrellas">${[1, 2, 3, 4, 5].map(n => estrella(n <= r.estrellas)).join("")}</p>
+        <p class="resena__texto${r.texto ? "" : " resena__texto--corta"}">${r.texto ? "“" + esc(r.texto) + "”" : "Le puso " + r.estrellas + " estrellas a su compra."}</p>
+        <p class="resena__pie">Compró <a href="catalogo.html?q=${encodeURIComponent(r.producto)}">${esc(r.producto)}</a></p>
       </article></li>`).join("");
   }
 
@@ -433,7 +465,10 @@
       $("#miga-actual").textContent = st.c ? titulo : "Catálogo";
       document.title = titulo + " · Lyon Market";
       document.querySelectorAll("#nav a").forEach(a => a.toggleAttribute("aria-current", a.search === "?c=" + st.c && !!st.c));
-      $("#cat-advertencia").hidden = !(st.c === "vaporizadores" || !st.c);
+      const aviso18 = $("#cat-advertencia");
+      aviso18.hidden = st.c === "growshop";
+      aviso18.textContent = "Venta exclusiva para mayores de 18 años." +
+        (st.c === "vaporizadores" || !st.c ? " Los sistemas electrónicos de administración de nicotina son potencialmente adictivos." : "");
       pintarFiltros(); pintarActivos();
 
       const res = catalogo.filter(p => pasa(p)).sort(ORDEN[st.orden] || ORDEN.destacados);
