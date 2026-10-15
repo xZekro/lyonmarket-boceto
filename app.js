@@ -4,6 +4,7 @@
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const clp = n => "$" + Math.round(n).toLocaleString("es-CL");
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const plano = s => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
   /* ---------- Puerta de edad (+18, recuerda la respuesta) ---------- */
   const edad = $("#edad");
@@ -40,6 +41,7 @@
         : "El retiro de hoy ya pasó. Lo que compras ahora sale el " + nombreDia[sig] + ". El local atiende hasta las " + (dia === 6 ? "17:00" : "19:00") + ".";
     }
     $("#reloj-franja").textContent = franja;
+    if (!$("#dia-estado")) return;
     $("#dia-estado").textContent = estado;
     $("#dia-ahora").style.setProperty("--p", Math.min(1, Math.max(0, (h + m / 60 - 8) / 14)));
     $("#dia-hora").textContent = String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
@@ -49,9 +51,19 @@
   actualizarReloj();
   setInterval(actualizarReloj, 30000);
 
-  /* ---------- Productos: un carrusel por sección ---------- */
+  /* ---------- Productos: los curados de la portada + el catálogo completo ---------- */
   const datos = window.LYON_DATOS || { productos: [], novedades: [], secciones: {} };
-  const porSlug = Object.fromEntries(datos.productos.map(p => [p.slug, p]));
+  const CAT_NOMBRE = { tabaqueria: "Tabaqueria", smokeshop: "Smokeshop", vaporizadores: "Vaporizadores", growshop: "Growshop" };
+  const catalogo = (window.LYON_CATALOGO || []).filter(x => CAT_NOMBRE[x.c]).map(x => ({
+    slug: x.s, nombre: x.n, marca: x.m, cat: CAT_NOMBRE[x.c], c: x.c, sub: x.sub, precio: x.p,
+    stock: x.d && !x.st ? Infinity : x.st, sku: x.sku, nOpc: x.o, fecha: x.u,
+    img: x.f ? `https://cdnx.jumpseller.com/lyonmarketstore/image/${x.f}/resize/600/600?1` : "assets/logo-lyon.png",
+    url: "https://lyonmarket.cl/" + x.s
+  }));
+  const porSlug = Object.fromEntries(catalogo.map(p => [p.slug, p]));
+  datos.productos.forEach(p => { porSlug[p.slug] = { ...porSlug[p.slug], ...p, nOpc: p.opciones.length, curado: true }; });
+  catalogo.forEach((p, i) => { catalogo[i] = porSlug[p.slug]; });
+  const enStock = p => p.stock > 0;
   const listas = {
     novedades: datos.novedades,
     tabaqueria: datos.secciones.Tabaqueria || [],
@@ -62,18 +74,18 @@
 
   function placa(p) {
     const li = document.createElement("li");
-    const agotado = p.stock <= 0, vape = p.cat === "Vaporizadores";
-    const ops = p.opciones.length ? `<span>${p.opciones.length} ${vape ? "sabores" : "variantes"}</span>` : "";
+    const agotado = !enStock(p), vape = p.cat === "Vaporizadores";
+    const ops = p.nOpc ? `<span>${p.nOpc} ${vape ? "sabores" : "variantes"}</span>` : "";
     li.innerHTML = `
       <article class="placa${agotado ? " placa--agotada" : ""}">
         <div class="placa__foto">
           <img src="${p.img}" alt="${esc(p.nombre)}" loading="lazy" width="600" height="600">
-          <span class="placa__codigo" title="Código del local">Cód. ${esc(p.sku)}</span>
+          ${p.sku ? `<span class="placa__codigo" title="Código del local">Cód. ${esc(p.sku)}</span>` : ""}
         </div>
         <div class="placa__cuerpo">
           ${p.marca ? `<span class="placa__marca">${esc(p.marca)}</span>` : ""}
           <a class="placa__nombre" href="${p.url}" target="_blank" rel="noopener">${esc(p.nombre)}</a>
-          <div class="placa__meta"><span class="placa__stock${agotado ? " placa__stock--cero" : ""}">${agotado ? "Sin stock" : p.stock + " en stock"}</span>${ops}</div>
+          <div class="placa__meta"><span class="placa__stock${agotado ? " placa__stock--cero" : ""}">${agotado ? "Sin stock" : isFinite(p.stock) ? p.stock + " en stock" : "Disponible"}</span>${ops}</div>
           <div class="placa__pie">
             <span class="placa__precio">${clp(p.precio)}</span>
             ${agotado
@@ -130,7 +142,7 @@
         <img src="${p.img}" alt="" width="72" height="72">
         <div>
           <p class="cajon__nombre">${esc(p.nombre)}</p>
-          <p class="cajon__precio">${clp(p.precio)} c/u · ${p.stock} en stock</p>
+          <p class="cajon__precio">${clp(p.precio)} c/u${isFinite(p.stock) ? " · " + p.stock + " en stock" : ""}</p>
           <div class="cantidad" role="group" aria-label="Cantidad de ${esc(p.nombre)}">
             <button type="button" data-menos="${s}" aria-label="Quitar uno" ${q <= 1 ? "disabled" : ""}>−</button>
             <span aria-live="polite">${q}</span>
@@ -184,16 +196,45 @@
   $("#cajon-vaciar").addEventListener("click", () => { carro = {}; guardar(); pintarCarro(); avisar("Vaciaste el carro."); });
   $("#cajon-pagar").addEventListener("click", () => avisar("En la tienda real, aquí sigue el pago de Jumpseller."));
 
+  // La foto del producto sale de la placa, sube en arco y cae dentro del carro.
+  function volarAlCarro(boton) {
+    const foto = boton.closest(".placa")?.querySelector(".placa__foto img");
+    const destino = btnCarro.getBoundingClientRect();
+    if (reduce || !foto || !destino.width || !document.body.animate) return Promise.resolve();
+    const o = foto.getBoundingClientRect(), lado = Math.min(o.width * .8, 150);
+    const x0 = o.left + o.width / 2 - lado / 2, y0 = o.top + o.height / 2 - lado / 2;
+    const dx = destino.left + destino.width / 2 - (x0 + lado / 2), dy = destino.top + destino.height / 2 - (y0 + lado / 2);
+    const capa = document.createElement("div"), img = new Image();
+    capa.className = "vuelo"; capa.setAttribute("aria-hidden", "true");
+    capa.style.cssText = `left:${x0}px;top:${y0}px;width:${lado}px;height:${lado}px`;
+    img.src = foto.currentSrc || foto.src; img.alt = "";
+    capa.append(img); document.body.append(capa);
+    const dur = 820, alto = Math.min(170, Math.max(70, Math.abs(dx) * .18));
+    capa.animate([{ transform: "translateX(0)" }, { transform: `translateX(${dx}px)` }],
+      { duration: dur, easing: "cubic-bezier(.45,.05,.6,1)", fill: "forwards" });
+    const vuelo = img.animate([
+      { transform: "translateY(0) scale(1) rotate(0deg)", easing: "cubic-bezier(.2,.75,.4,1)" },
+      { transform: `translateY(${-alto}px) scale(.62) rotate(-10deg)`, offset: .38, easing: "cubic-bezier(.55,0,.85,.5)" },
+      { transform: `translateY(${dy}px) scale(.14) rotate(18deg)`, opacity: .85 }
+    ], { duration: dur, fill: "forwards" });
+    // Si el navegador frena la animación (pestaña en segundo plano), el carro igual se actualiza.
+    const listo = Promise.race([vuelo.finished, new Promise(r => setTimeout(r, dur + 250))]);
+    return listo.then(() => capa.remove(), () => capa.remove());
+  }
+
   document.addEventListener("click", e => {
     const a = e.target.closest("[data-agrega]"), v = e.target.closest("[data-avisa]");
     if (a) {
       const s = a.dataset.agrega, p = porSlug[s];
       if ((carro[s] || 0) >= p.stock) { avisar("No hay más stock de " + p.nombre + " en el local."); return; }
-      carro[s] = (carro[s] || 0) + 1; guardar(); pintarCarro();
-      btnCarro.classList.remove("pulso"); void btnCarro.offsetWidth; btnCarro.classList.add("pulso");
+      carro[s] = (carro[s] || 0) + 1; guardar();
       a.classList.add("agregado"); a.textContent = "Agregado";
       setTimeout(() => { a.classList.remove("agregado"); a.textContent = "Agregar"; }, 1400);
-      avisar(p.nombre + " quedó en tu carro.");
+      volarAlCarro(a).then(() => {
+        pintarCarro();
+        btnCarro.classList.remove("pulso"); void btnCarro.offsetWidth; btnCarro.classList.add("pulso");
+        avisar(p.nombre + " quedó en tu carro.");
+      });
     }
     if (v) avisar("Te avisaremos cuando " + porSlug[v.dataset.avisa].nombre + " vuelva al local.");
   });
@@ -208,14 +249,240 @@
   });
   nav.addEventListener("click", e => { if (e.target.closest("a")) { nav.classList.remove("abierto"); menuBtn.setAttribute("aria-expanded", "false"); } });
 
-  /* ---------- Marcas (las que la tienda tiene publicadas) ---------- */
-  const marcas = ["RAW", "OCB", "Elements", "Clipper", "G-Rollz", "Lion Rolling Circus", "The Bulldog Amsterdam", "Bonglab", "BSF", "Beamer",
-    "Biobizz", "Grotek", "Top Crop", "Jiffy", "Kasvi", "Hortilight", "Garden HighPro", "Neptune Hydroponics", "Organic Life", "Wonderland Agronutrients",
-    "Sensi Seeds", "Dutch Passion", "Sweet Seeds", "Medical Seeds", "Cannabiogen", "Bless Hemp", "Soulblime", "Dream High", "VDL", "Mi"];
-  $("#cinta").innerHTML = marcas.map(m => `<a href="#">${m.replace("-", "‑")}</a>`).join("");
+  /* ---------- Marcas: cinta de logos y cinta de nombres; cada una abre el catálogo filtrado ---------- */
+  const claveMarca = s => plano(s).replace(/\s+amsterdam$/, "").replace(/^clippers$/, "clipper").trim();
+  const marcasCat = new Map();
+  catalogo.forEach(p => {
+    const k = claveMarca(p.marca); if (!k) return;
+    const m = marcasCat.get(k) || { n: 0, nombres: {} };
+    m.n++; m.nombres[p.marca] = (m.nombres[p.marca] || 0) + 1; marcasCat.set(k, m);
+  });
+  const nombreMarca = k => Object.entries(marcasCat.get(k)?.nombres || { [k]: 1 }).sort((a, b) => b[1] - a[1])[0][0];
+  const cuenta = n => n + (n === 1 ? " producto" : " productos");
+
+  const filaLogos = $("#marcas-logos"), filaNombres = $("#marcas-nombres");
+  if (filaLogos) {
+    const LOGOS = [["raw", "raw.webp", "RAW"], ["the bulldog", "bulldog.webp", "The Bulldog Amsterdam"],
+      ["lion rolling circus", "lion-rolling-circus.webp", "Lion Rolling Circus"], ["elements", "elements.webp", "Elements"],
+      ["soulblime", "soulblime.webp", "Soulblime"]];
+    const conLogo = new Set(LOGOS.map(l => l[0]));
+    const logos = LOGOS.map(([k, img, nombre]) => `<li><a class="logo" href="catalogo.html?marca=${encodeURIComponent(k)}">
+        <span class="logo__img"><img src="assets/marcas/${img}" alt="${nombre}" width="576" height="324"></span>
+        <span class="logo__pie"><b>${nombre}</b><small>${cuenta(marcasCat.get(k)?.n || 0)}</small></span></a></li>`);
+    const nombres = [...marcasCat.entries()].filter(([k]) => !conLogo.has(k)).sort((a, b) => b[1].n - a[1].n).slice(0, 18)
+      .map(([k, m]) => `<li><a class="logo logo--nombre" href="catalogo.html?marca=${encodeURIComponent(k)}">
+          <span class="logo__palabra">${esc(nombreMarca(k))}</span><small>${cuenta(m.n)}</small></a></li>`);
+    // Se repite hasta cubrir la pantalla y luego se duplica, así la cinta corre sin cortes. Las copias no se leen ni se enfocan.
+    const llenar = (ul, items, anchoTeja) => {
+      const veces = Math.max(1, Math.ceil(1.15 * Math.max(innerWidth, 1280) / (items.length * anchoTeja)));
+      const copias = Array(veces * 2 - 1).fill(items).flat().join("")
+        .replace(/<li>/g, '<li aria-hidden="true">').replace(/<a /g, '<a tabindex="-1" ');
+      ul.innerHTML = items.join("") + copias;
+      ul.style.setProperty("--dur", Math.round(veces * items.length * 4.5) + "s");
+    };
+    llenar(filaLogos, logos, 260);
+    llenar(filaNombres, nombres, 220);
+  }
+
+  /* ---------- Página de categoría: grilla con filtros ---------- */
+  const grilla = $("#grilla");
+  if (grilla) {
+    const TEXTOS = {
+      "": ["Catálogo completo", "Todo lo que hay en Freire 659, con el mismo precio, stock y código del mostrador."],
+      tabaqueria: ["Tabaquería", "Tabaco, papelillos, filtros, blunts, boquillas y encendedores."],
+      smokeshop: ["Smokeshop", "Bongs, pipas, moledores, ceniceros y accesorios para guardar y transportar."],
+      vaporizadores: ["Vaporizadores", "Desechables, recargables, pods, baterías y líquidos, con su capacidad y contenido de nicotina a la vista."],
+      growshop: ["Growshop", "Sustratos, macetas, fertilizantes e insumos para cultivo indoor y exterior."]
+    };
+    const PRECIOS = [["0-5000", "Hasta $5.000"], ["5000-15000", "$5.000 a $15.000"], ["15000-30000", "$15.000 a $30.000"], ["30000-", "Más de $30.000"]];
+    const POR_PAGINA = 24;
+    const url = new URLSearchParams(location.search);
+    const st = {
+      c: CAT_NOMBRE[url.get("c")] ? url.get("c") : "",
+      q: url.get("q") || "",
+      sub: new Set(url.getAll("sub")),
+      marca: new Set(url.getAll("marca").map(claveMarca)),
+      stock: url.get("stock") === "1",
+      precio: PRECIOS.some(p => p[0] === url.get("precio")) ? url.get("precio") : "",
+      orden: url.get("orden") || "destacados",
+      n: POR_PAGINA,
+      todasMarcas: false
+    };
+
+    const enPrecio = (p, r) => { if (!r) return true; const [a, b] = r.split("-").map(Number); return p.precio >= a && (!b || p.precio < b); };
+    // Cada filtro cuenta sus opciones con los demás filtros aplicados, así nunca ofrece algo que deja la grilla vacía sin avisar.
+    function pasa(p, salvo) {
+      if (st.c && p.c !== st.c) return false;
+      if (st.q) { const q = plano(st.q); if (!plano(p.nombre + " " + p.marca + " " + p.sub + " " + p.sku).includes(q)) return false; }
+      if (salvo !== "stock" && st.stock && !enStock(p)) return false;
+      if (salvo !== "sub" && st.sub.size && !st.sub.has(p.sub)) return false;
+      if (salvo !== "marca" && st.marca.size && !st.marca.has(claveMarca(p.marca))) return false;
+      if (salvo !== "precio" && !enPrecio(p, st.precio)) return false;
+      return true;
+    }
+    const contar = (salvo, llave) => catalogo.filter(p => pasa(p, salvo)).reduce((m, p) => { const k = llave(p); if (k) m.set(k, (m.get(k) || 0) + 1); return m; }, new Map());
+    const ORDEN = {
+      destacados: (a, b) => (enStock(b) - enStock(a)) || ((b.curado || 0) - (a.curado || 0)) || (Math.min(b.stock, 999) - Math.min(a.stock, 999)),
+      nuevos: (a, b) => (enStock(b) - enStock(a)) || String(b.fecha).localeCompare(String(a.fecha)),
+      "precio-asc": (a, b) => a.precio - b.precio,
+      "precio-desc": (a, b) => b.precio - a.precio,
+      nombre: (a, b) => a.nombre.localeCompare(b.nombre, "es")
+    };
+
+    function guardarUrl() {
+      const u = new URLSearchParams();
+      if (st.c) u.set("c", st.c);
+      if (st.q) u.set("q", st.q);
+      st.sub.forEach(s => u.append("sub", s));
+      st.marca.forEach(m => u.append("marca", m));
+      if (st.stock) u.set("stock", "1");
+      if (st.precio) u.set("precio", st.precio);
+      if (st.orden !== "destacados") u.set("orden", st.orden);
+      history.replaceState(null, "", "catalogo.html" + (u.toString() ? "?" + u : ""));
+    }
+
+    const casilla = (nombre, valor, texto, n, marcada) =>
+      `<label class="casilla${n ? "" : " casilla--vacia"}"><input type="checkbox" name="${nombre}" value="${esc(valor)}"${marcada ? " checked" : ""}${!n && !marcada ? " disabled" : ""}><span>${esc(texto)}</span><small>${n}</small></label>`;
+
+    function pintarFiltros() {
+      // Pestañas
+      const porCat = catalogo.reduce((m, p) => (m[p.c] = (m[p.c] || 0) + 1, m), {});
+      $("#pestanas").innerHTML = [["", "Todo", catalogo.length], ...Object.keys(CAT_NOMBRE).map(c => [c, TEXTOS[c][0], porCat[c] || 0])]
+        .map(([c, n, k]) => `<li><a href="catalogo.html${c ? "?c=" + c : ""}" data-cat="${c}"${c === st.c ? ' aria-current="page"' : ""}>${n}<small>${k}</small></a></li>`).join("");
+      const actual = $("#pestanas [aria-current]"), barra = $(".pestanas");
+      if (actual) barra.scrollLeft = actual.offsetLeft - (barra.clientWidth - actual.offsetWidth) / 2;
+      // Tipo (solo dentro de una categoría)
+      const subs = contar("sub", p => p.sub);
+      $("#f-sub-caja").hidden = !st.c;
+      const todosSub = [...new Set(catalogo.filter(p => p.c === st.c && p.sub).map(p => p.sub))].sort((a, b) => a.localeCompare(b, "es"));
+      $("#f-sub").innerHTML = todosSub.map(s => casilla("sub", s, s, subs.get(s) || 0, st.sub.has(s))).join("");
+      // Precio
+      const precios = new Map(PRECIOS.map(([r]) => [r, catalogo.filter(p => pasa(p, "precio") && enPrecio(p, r)).length]));
+      $("#f-precio").innerHTML = PRECIOS.map(([r, t]) =>
+        `<button type="button" class="chip" data-precio="${r}" aria-pressed="${st.precio === r}"${!precios.get(r) && st.precio !== r ? " disabled" : ""}>${t}<small>${precios.get(r)}</small></button>`).join("");
+      // Marcas: las con más productos primero; las marcadas siempre a la vista
+      const marcas = contar("marca", p => claveMarca(p.marca));
+      const qm = plano($("#f-marca-q").value);
+      let lista = [...marcas.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+      st.marca.forEach(k => { if (!marcas.has(k)) lista.unshift([k, 0]); });
+      if (qm) lista = lista.filter(([k]) => k.includes(qm));
+      const corta = !qm && !st.todasMarcas && lista.length > 8;
+      const visibles = corta ? lista.filter(([k], i) => i < 8 || st.marca.has(k)) : lista;
+      $("#f-marca").innerHTML = visibles.map(([k, n]) => casilla("marca", k, nombreMarca(k), n, st.marca.has(k))).join("")
+        || `<p class="filtro__nada">No hay marcas con ese nombre aquí.</p>`;
+      const mas = $("#f-marca-mas");
+      mas.hidden = qm || lista.length <= 8;
+      mas.textContent = st.todasMarcas ? "Ver menos marcas" : `Ver las ${lista.length} marcas`;
+      mas.setAttribute("aria-expanded", st.todasMarcas);
+      $("#f-stock").checked = st.stock;
+    }
+
+    function pintarActivos() {
+      const chips = [];
+      if (st.q) chips.push(["q", "", `“${st.q}”`]);
+      if (st.stock) chips.push(["stock", "", "Con stock"]);
+      st.sub.forEach(s => chips.push(["sub", s, s]));
+      st.marca.forEach(m => chips.push(["marca", m, nombreMarca(m)]));
+      if (st.precio) chips.push(["precio", "", PRECIOS.find(p => p[0] === st.precio)[1]]);
+      $("#activos").innerHTML = chips.map(([t, v, txt]) =>
+        `<li><button type="button" class="activo" data-quita="${t}" data-valor="${esc(v)}" aria-label="Quitar filtro ${esc(txt)}">${esc(txt)}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg></button></li>`).join("")
+        + (chips.length > 1 ? `<li><button type="button" class="activo activo--todos" data-quita="todo">Limpiar todo</button></li>` : "");
+      const n = chips.length - (st.q ? 1 : 0);
+      $("#filtros-n").hidden = !n; $("#filtros-n").textContent = n;
+    }
+
+    function pintar(animar) {
+      const [titulo, bajada] = TEXTOS[st.c];
+      $("#cat-titulo").textContent = titulo;
+      $("#cat-bajada").textContent = bajada;
+      $("#miga-actual").textContent = st.c ? titulo : "Catálogo";
+      document.title = titulo + " · Lyon Market";
+      document.querySelectorAll("#nav a").forEach(a => a.toggleAttribute("aria-current", a.search === "?c=" + st.c && !!st.c));
+      $("#cat-advertencia").hidden = !(st.c === "vaporizadores" || !st.c);
+      pintarFiltros(); pintarActivos();
+
+      const res = catalogo.filter(p => pasa(p)).sort(ORDEN[st.orden] || ORDEN.destacados);
+      $("#res-cuenta").textContent = cuenta(res.length);
+      $("#f-ver").textContent = res.length ? "Ver " + cuenta(res.length) : "Sin resultados";
+      $("#cat-vacio").hidden = res.length > 0;
+      const desde = animar === "mas" ? grilla.children.length : 0;
+      if (desde === 0) grilla.replaceChildren();
+      res.slice(desde, st.n).forEach((p, i) => {
+        const li = placa(p);
+        if (!reduce) li.style.setProperty("--i", Math.min(i, 12));
+        li.classList.add("entra");
+        grilla.append(li);
+      });
+      const ver = $("#ver-mas");
+      ver.hidden = res.length <= st.n;
+      ver.textContent = `Ver más productos (${res.length - Math.min(st.n, res.length)} más)`;
+      guardarUrl();
+    }
+
+    // Eventos de los filtros
+    const form = $("#form-filtros");
+    form.addEventListener("change", e => {
+      const t = e.target;
+      if (t.name === "stock") st.stock = t.checked;
+      if (t.name === "sub") t.checked ? st.sub.add(t.value) : st.sub.delete(t.value);
+      if (t.name === "marca") t.checked ? st.marca.add(t.value) : st.marca.delete(t.value);
+      st.n = POR_PAGINA; pintar();
+    });
+    form.addEventListener("click", e => {
+      const ch = e.target.closest("[data-precio]");
+      if (ch) { st.precio = st.precio === ch.dataset.precio ? "" : ch.dataset.precio; st.n = POR_PAGINA; pintar(); }
+    });
+    $("#f-marca-q").addEventListener("input", pintarFiltros);
+    $("#f-marca-mas").addEventListener("click", () => { st.todasMarcas = !st.todasMarcas; pintarFiltros(); });
+    const limpiar = () => { st.q = ""; $("#q").value = ""; st.sub.clear(); st.marca.clear(); st.stock = false; st.precio = ""; st.n = POR_PAGINA; $("#f-marca-q").value = ""; pintar(); };
+    $("#f-limpiar").addEventListener("click", limpiar);
+    $("#vacio-limpiar").addEventListener("click", limpiar);
+    $("#activos").addEventListener("click", e => {
+      const b = e.target.closest("[data-quita]"); if (!b) return;
+      const { quita, valor } = b.dataset;
+      if (quita === "todo") return limpiar();
+      if (quita === "q") { st.q = ""; $("#q").value = ""; }
+      if (quita === "stock") st.stock = false;
+      if (quita === "precio") st.precio = "";
+      if (quita === "sub") st.sub.delete(valor);
+      if (quita === "marca") st.marca.delete(valor);
+      st.n = POR_PAGINA; pintar();
+    });
+    $("#orden").value = ORDEN[st.orden] ? st.orden : "destacados";
+    $("#orden").addEventListener("change", e => { st.orden = e.target.value; st.n = POR_PAGINA; pintar(); });
+    $("#ver-mas").addEventListener("click", () => { st.n += POR_PAGINA; pintar("mas"); });
+    // Las pestañas y el menú cambian de categoría sin recargar
+    document.addEventListener("click", e => {
+      const a = e.target.closest("#pestanas a, #nav a[href^='catalogo.html']");
+      if (!a || e.metaKey || e.ctrlKey) return;
+      e.preventDefault();
+      st.c = new URLSearchParams(a.search).get("c") || ""; st.sub.clear(); st.n = POR_PAGINA;
+      pintar();
+      $(".cat__cabeza").scrollIntoView({ behavior: reduce ? "auto" : "smooth" });
+    });
+    // El buscador de la cabecera filtra aquí mismo
+    const q = $("#q");
+    q.value = st.q;
+    let tq;
+    // La búsqueda de la cabecera recorre toda la tienda, no solo la categoría abierta.
+    const buscar = () => { st.q = q.value.trim(); if (st.q) { st.c = ""; st.sub.clear(); } st.n = POR_PAGINA; pintar(); };
+    q.addEventListener("input", () => { clearTimeout(tq); tq = setTimeout(buscar, 220); });
+    q.form.addEventListener("submit", e => { e.preventDefault(); clearTimeout(tq); buscar(); });
+
+    // Filtros en celular: panel lateral
+    const filtros = $("#filtros");
+    const abrirFiltros = () => { filtros.classList.add("abierto"); document.body.style.overflow = "hidden"; $(".filtros__cerrar").focus(); };
+    const cerrarFiltros = () => { filtros.classList.remove("abierto"); document.body.style.overflow = ""; };
+    $("#abrir-filtros").addEventListener("click", abrirFiltros);
+    filtros.addEventListener("click", e => { if (e.target.closest("[data-cerrar-filtros]")) cerrarFiltros(); });
+    document.addEventListener("keydown", e => { if (e.key === "Escape" && filtros.classList.contains("abierto")) cerrarFiltros(); });
+
+    pintar();
+  }
 
   /* ---------- Portada: pin metálico del león, flotando bajo la lámpara ---------- */
   const portada = $(".portada"), canvas = $("#lienzo");
+  if (!portada) return;
   let gl = null;
   try { gl = window.THREE && window.LYON_PIN && (canvas.getContext("webgl2") || canvas.getContext("webgl")); } catch (_) {}
   if (!gl) { portada.classList.add("sin-3d"); return; }
@@ -226,36 +493,50 @@
   renderer.outputEncoding = T.sRGBEncoding;
   renderer.autoClear = false;
 
-  // Humo ámbar que el puntero empuja.
-  const humoScene = new T.Scene(), humoCam = new T.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  // Humo ámbar que el puntero empuja: una capa espesa detrás del pin y hebras más finas que suben por delante.
+  const humoCam = new T.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   const humoUni = {
     uRes: { value: new T.Vector2(1, 1) }, uTime: { value: 0 }, uMouse: { value: new T.Vector2(.7, .5) },
     uPush: { value: 0 }, uLamp: { value: reduce ? 1 : .1 }, uCenter: { value: new T.Vector2(.7, .55) }
   };
-  humoScene.add(new T.Mesh(new T.PlaneGeometry(2, 2), new T.ShaderMaterial({
-    uniforms: humoUni, transparent: true, depthWrite: false,
-    vertexShader: "void main(){gl_Position=vec4(position,1.0);}",
-    fragmentShader: `
-      precision highp float;
-      uniform vec2 uRes,uMouse,uCenter; uniform float uTime,uPush,uLamp;
-      float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
-      float n(vec2 p){vec2 i=floor(p),f=fract(p);vec2 u=f*f*(3.-2.*f);
-        return mix(mix(h(i),h(i+vec2(1,0)),u.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),u.x),u.y);}
-      float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*n(p);p=p*2.03+vec2(1.7,9.2);a*=.5;}return v;}
-      void main(){
-        float k=uRes.x/uRes.y; vec2 p=gl_FragCoord.xy/uRes; p.x*=k;
-        vec2 m=uMouse; m.x*=k; vec2 c=uCenter; c.x*=k;
-        vec2 d=p-m; float r=length(d);
-        p+=d/(r+1e-3)*exp(-r*r*14.)*uPush*.22;
-        float t=uTime*.045;
-        vec2 q=vec2(fbm(p*1.5+vec2(0.,-t*2.2)),fbm(p*1.5+vec2(5.2,1.3)-t));
-        float s=fbm(p*1.25+q*1.9+vec2(t*.5,-t*1.6));
-        float lamp=exp(-length((p-c)*vec2(1.,.8))*1.7);
-        float a=smoothstep(.36,.95,s)*(.16+lamp*1.2)*uLamp*.8;
-        vec3 calido=mix(vec3(.55,.08,.02),vec3(1.,.66,.16),uLamp);
-        gl_FragColor=vec4(mix(calido*.7,calido,s*lamp*1.4)*a,a);
-      }`
-  })));
+  const capaHumo = delante => {
+    const escena = new T.Scene();
+    escena.add(new T.Mesh(new T.PlaneGeometry(2, 2), new T.ShaderMaterial({
+      uniforms: { ...humoUni, uCapa: { value: delante ? 1 : 0 } }, transparent: true, depthWrite: false, depthTest: false,
+      vertexShader: "void main(){gl_Position=vec4(position,1.0);}",
+      fragmentShader: `
+        precision highp float;
+        uniform vec2 uRes,uMouse,uCenter; uniform float uTime,uPush,uLamp,uCapa;
+        float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+        float n(vec2 p){vec2 i=floor(p),f=fract(p);vec2 u=f*f*(3.-2.*f);
+          return mix(mix(h(i),h(i+vec2(1,0)),u.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),u.x),u.y);}
+        float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*n(p);p=p*2.03+vec2(1.7,9.2);a*=.5;}return v;}
+        void main(){
+          float k=uRes.x/uRes.y; vec2 uv=gl_FragCoord.xy/uRes; vec2 p=uv; p.x*=k;
+          vec2 m=uMouse; m.x*=k; vec2 c=uCenter; c.x*=k;
+          vec2 d=p-m; float r=length(d);
+          p+=d/(r+1e-3)*exp(-r*r*12.)*uPush*.3;
+          float t=uTime*.075+uCapa*13.;
+          vec2 q=vec2(fbm(p*1.4+vec2(0.,-t*2.4)),fbm(p*1.4+vec2(5.2,1.3)-t));
+          float nube=fbm(p*1.2+q*2.1+vec2(t*.6,-t*2.));
+          // Hebras: ruido estirado en vertical que sube desde abajo.
+          float hebra=fbm(vec2(p.x*2.4,p.y*.7-t*2.6)+q*1.6);
+          float sube=smoothstep(1.05,.05,uv.y);
+          float lamp=exp(-length((p-c)*vec2(1.,.75))*1.35);
+          float a;
+          if(uCapa<.5){
+            a=smoothstep(.32,.9,nube)*(.24+lamp*1.55)+smoothstep(.52,.82,hebra)*sube*(.22+lamp*1.1);
+          }else{
+            a=smoothstep(.6,.88,hebra)*sube*lamp*.75+smoothstep(.6,.95,nube)*lamp*.18;
+          }
+          a=min(a*uLamp,.82);
+          vec3 calido=mix(vec3(.55,.08,.02),vec3(1.,.68,.18),uLamp);
+          gl_FragColor=vec4(mix(calido*.65,calido*1.05,clamp(nube*lamp*1.5,0.,1.))*a,a);
+        }`
+    })));
+    return escena;
+  };
+  const humoAtras = capaHumo(false), humoDelante = capaHumo(true);
 
   // El pin: aro de metal dorado extruido, cara esmaltada con brillo que la recorre, reverso grabado.
   const scene = new T.Scene();
@@ -295,16 +576,16 @@
   });
 
   const LADO = 3.3, GROSOR = .26, CAPAS = 26;
-  const plano = new T.PlaneGeometry(LADO, LADO);
+  const plano3d = new T.PlaneGeometry(LADO, LADO);
   const bordeOscuro = new T.Color("#7a4a07"), bordeClaro = new T.Color("#e2a531");
   for (let i = 0; i < CAPAS; i++) {
     const f = i / (CAPAS - 1);
-    const m = new T.Mesh(plano, metal(bordeOscuro.clone().lerp(bordeClaro, Math.sin(f * Math.PI) * .8 + .1), false));
+    const m = new T.Mesh(plano3d, metal(bordeOscuro.clone().lerp(bordeClaro, Math.sin(f * Math.PI) * .8 + .1), false));
     m.position.z = (f - .5) * GROSOR;
     pin.add(m);
   }
-  const aro = new T.Mesh(plano, metal("#ffc94f", true)); aro.position.z = GROSOR / 2 + .002; pin.add(aro);
-  const cara = new T.Mesh(plano, esmalte); cara.position.z = GROSOR / 2 + .01; pin.add(cara);
+  const aro = new T.Mesh(plano3d, metal("#ffc94f", true)); aro.position.z = GROSOR / 2 + .002; pin.add(aro);
+  const cara = new T.Mesh(plano3d, esmalte); cara.position.z = GROSOR / 2 + .01; pin.add(cara);
 
   // Reverso: metal cepillado con grabado.
   function armarReverso() {
@@ -322,13 +603,14 @@
     x.font = "600 22px Hanken, sans-serif"; x.fillText("FREIRE 659 · SAN BERNARDO", S / 2, S * .72);
     x.fillText("DESDE 2018", S / 2, S * .79);
     const t = new T.CanvasTexture(cv); t.encoding = T.sRGBEncoding;
-    const rev = new T.Mesh(plano, new T.MeshBasicMaterial({ map: t, alphaTest: .5, color: new T.Color(1, 1, 1) }));
+    const rev = new T.Mesh(plano3d, new T.MeshBasicMaterial({ map: t, alphaTest: .5, color: new T.Color(1, 1, 1) }));
     rev.rotation.y = Math.PI; rev.position.z = -GROSOR / 2 - .004; pin.add(rev);
     capasLuz.push(rev.material);
   }
 
-  // Encuadre según el ancho.
-  let movil = false, baseY = 0;
+  // Encuadre: en escritorio el pin llena el espacio a la derecha del texto; en el celular va arriba, grande.
+  const texto = $(".portada__texto");
+  let movil = false, baseY = 0, centroX = .7;
   function encuadre() {
     const w = canvas.clientWidth, h = canvas.clientHeight;
     renderer.setSize(w, h, false);
@@ -337,21 +619,28 @@
     movil = w < 720;
     const vH = 2 * Math.tan(T.MathUtils.degToRad(cam.fov / 2)) * cam.position.z, vW = vH * cam.aspect;
     if (movil) {
-      giro.scale.setScalar(Math.min(1, (vH * .78) / LADO, (vW * .78) / LADO));
-      baseY = vH * .02; giro.position.set(0, baseY, 0); humoUni.uCenter.value.set(.5, .55);
+      giro.scale.setScalar(Math.min(1.25, (vH * .9) / LADO, (vW * .9) / LADO));
+      baseY = vH * .01; giro.position.set(0, baseY, 0); centroX = .5; humoUni.uCenter.value.set(.5, .55);
     } else {
-      giro.scale.setScalar(Math.min(1.6, (vH * .92) / LADO, (vW * .5) / LADO));
-      baseY = 0; giro.position.set(vW * .22, 0, 0); humoUni.uCenter.value.set(.72, .55);
+      const c = canvas.getBoundingClientRect(), tx = texto.getBoundingClientRect();
+      const pad = parseFloat(getComputedStyle(portada).paddingRight) || 0;
+      const izq = tx.right - c.left, der = w - pad * .5, espacio = Math.max(w * .3, der - izq);
+      const ladoPx = Math.min(espacio * .92, h * .86);
+      giro.scale.setScalar((ladoPx / h) * vH / LADO);
+      centroX = (izq + espacio / 2) / w;
+      baseY = 0; giro.position.set((centroX - .5) * vW, 0, 0); humoUni.uCenter.value.set(centroX, .55);
     }
+    portada.style.setProperty("--cx", centroX.toFixed(3));
     if (reduce) dibujar(0);
   }
   new ResizeObserver(encuadre).observe(canvas);
   encuadre();
+  document.fonts?.ready.then(encuadre);
 
   // Interacción: arrastrar para girar (con inercia); el puntero inclina y empuja el humo.
   let anguloY = 0, velY = reduce ? 0 : .35, arrastrando = false, ultX = 0, ultT = 0, inclX = 0, inclObj = 0;
   let ultimo = null;
-  const dentroDelPin = e => { const r = canvas.getBoundingClientRect(); return movil || (e.clientX - r.left) / r.width > .45; };
+  const dentroDelPin = e => { const r = canvas.getBoundingClientRect(); return movil || (e.clientX - r.left) / r.width > centroX - .25; };
   portada.addEventListener("pointerdown", e => {
     if (e.target.closest("a,button") || !dentroDelPin(e)) return;
     arrastrando = true; ultX = e.clientX; ultT = performance.now(); velY = 0;
@@ -362,7 +651,7 @@
     const r = canvas.getBoundingClientRect();
     const nx = (e.clientX - r.left) / r.width, ny = 1 - (e.clientY - r.top) / r.height;
     humoUni.uMouse.value.set(nx, ny);
-    if (ultimo) humoUni.uPush.value = Math.min(1.6, humoUni.uPush.value + Math.hypot(e.clientX - ultimo.x, e.clientY - ultimo.y) / 90);
+    if (ultimo) humoUni.uPush.value = Math.min(1.8, humoUni.uPush.value + Math.hypot(e.clientX - ultimo.x, e.clientY - ultimo.y) / 80);
     ultimo = { x: e.clientX, y: e.clientY };
     inclObj = (ny - .5) * -.5;
     if (arrastrando) {
@@ -393,7 +682,7 @@
     const dt = Math.min(.05, Math.max(0, (t - tPrev) / 1000)); tPrev = t;
     const L = lampara(t);
     portada.style.setProperty("--lampara", L.toFixed(3));
-    humoUni.uLamp.value = L; humoUni.uTime.value = t / 1000; humoUni.uPush.value *= .94;
+    humoUni.uLamp.value = L; humoUni.uTime.value = t / 1000; humoUni.uPush.value *= .95;
     luz.value = .3 + .7 * L;
     capasLuz.forEach(m => m.color.setScalar(.3 + .7 * L));
 
@@ -411,8 +700,9 @@
     brillo.value = (Math.cos(anguloY) > 0 ? .55 + Math.sin(anguloY) * .9 : 9) + (reduce ? 0 : Math.sin(t / 2300) * .15);
 
     renderer.clear();
-    renderer.render(humoScene, humoCam);
+    renderer.render(humoAtras, humoCam);
     if (listo) renderer.render(scene, cam);
+    renderer.render(humoDelante, humoCam);
   }
 
   if (reduce) return;

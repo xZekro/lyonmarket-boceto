@@ -34,16 +34,16 @@
     <span>Lyon Market</span>
   </a>
   <nav class="cabecera__nav" id="nav" aria-label="Categorías">
-    <a href="#tabaqueria">Tabaquería</a>
-    <a href="#smokeshop">Smokeshop</a>
-    <a href="#vaporizadores">Vaporizadores</a>
-    <a href="#growshop">Growshop</a>
+    <a href="catalogo.html?c=tabaqueria">Tabaquería</a>
+    <a href="catalogo.html?c=smokeshop">Smokeshop</a>
+    <a href="catalogo.html?c=vaporizadores">Vaporizadores</a>
+    <a href="catalogo.html?c=growshop">Growshop</a>
     <a href="#marcas">Marcas</a>
   </nav>
-  <form class="buscar" role="search" onsubmit="return false">
+  <form class="buscar" role="search" action="catalogo.html">
     <label class="sr" for="q">Buscar productos</label>
     <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
-    <input id="q" type="search" placeholder="Buscar productos" autocomplete="off">
+    <input id="q" name="q" type="search" placeholder="Buscar productos" autocomplete="off">
   </form>
   <div class="cabecera__acciones">
     <a class="icono" href="#" aria-label="Mi cuenta"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c1.4-3.6 4.2-5.3 7.5-5.3s6.1 1.7 7.5 5.3"/></svg></a>
@@ -98,7 +98,7 @@
   <div class="seccion__cabeza">
     <h2 id="tabaqueria-titulo">Tabaquería</h2>
     <p>Tabaco, papelillos, filtros, blunts, boquillas y encendedores.</p>
-    <a class="ver-todo" href="https://lyonmarket.cl/tabaqueria" target="_blank" rel="noopener">Ver todo tabaquería</a>
+    <a class="ver-todo" href="catalogo.html?c=tabaqueria">Ver todo tabaquería</a>
     <div class="riel__flechas">
       <button class="flecha" type="button" data-riel="riel-tabaqueria" data-dir="-1" aria-label="Anteriores"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 6-6 6 6 6"/></svg></button>
       <button class="flecha" type="button" data-riel="riel-tabaqueria" data-dir="1" aria-label="Siguientes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9.5 6 6 6-6 6"/></svg></button>
@@ -111,7 +111,7 @@
   <div class="seccion__cabeza">
     <h2 id="smokeshop-titulo">Smokeshop</h2>
     <p>Bongs, pipas, moledores, ceniceros y accesorios para guardar y transportar.</p>
-    <a class="ver-todo" href="https://lyonmarket.cl/smokeshop" target="_blank" rel="noopener">Ver todo smokeshop</a>
+    <a class="ver-todo" href="catalogo.html?c=smokeshop">Ver todo smokeshop</a>
     <div class="riel__flechas">
       <button class="flecha" type="button" data-riel="riel-smokeshop" data-dir="-1" aria-label="Anteriores"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 6-6 6 6 6"/></svg></button>
       <button class="flecha" type="button" data-riel="riel-smokeshop" data-dir="1" aria-label="Siguientes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9.5 6 6 6-6 6"/></svg></button>
@@ -120,29 +120,11 @@
   <ul class="riel" id="riel-smokeshop" data-seccion="smokeshop"></ul>
 </section>
 
-<section class="despacho" aria-labelledby="desp-titulo">
-  <div class="despacho__texto">
-    <h2 id="desp-titulo">Compras antes de las 13:00, sale hoy.</h2>
-    <p>El courier retira los pedidos en el local a las 13:00, de lunes a viernes. Lo que compras después sale el siguiente día hábil. Si prefieres, lo retiras tú mismo con tu número de orden.</p>
-  </div>
-  <div class="dia" aria-label="Horario del día">
-    <div class="dia__barra">
-      <span class="dia__tramo dia__tramo--abierto" style="--a:11;--b:19"></span>
-      <span class="dia__corte" style="--h:13"><b>13:00</b> retiro del courier</span>
-      <span class="dia__ahora" id="dia-ahora"><b id="dia-hora">--:--</b></span>
-    </div>
-    <ol class="dia__marcas" aria-hidden="true">
-      <li style="--h:8">08</li><li style="--h:11">11</li><li style="--h:13">13</li><li style="--h:16">16</li><li style="--h:19">19</li><li style="--h:22">22</li>
-    </ol>
-    <p class="dia__estado" id="dia-estado" aria-live="polite"></p>
-  </div>
-</section>
-
 <section class="estante estante--vapes" id="vaporizadores" aria-labelledby="vaporizadores-titulo">
   <div class="seccion__cabeza">
     <h2 id="vaporizadores-titulo">Vaporizadores</h2>
     <p>Desechables, recargables, pods, baterías y líquidos, con su capacidad y contenido de nicotina a la vista.</p>
-    <a class="ver-todo" href="https://lyonmarket.cl/vaporizadores" target="_blank" rel="noopener">Ver todo vaporizadores</a>
+    <a class="ver-todo" href="catalogo.html?c=vaporizadores">Ver todo vaporizadores</a>
     <div class="riel__flechas">
       <button class="flecha" type="button" data-riel="riel-vaporizadores" data-dir="-1" aria-label="Anteriores"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 6-6 6 6 6"/></svg></button>
       <button class="flecha" type="button" data-riel="riel-vaporizadores" data-dir="1" aria-label="Siguientes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9.5 6 6 6-6 6"/></svg></button>
@@ -156,7 +138,7 @@
   <div class="seccion__cabeza">
     <h2 id="growshop-titulo">Growshop</h2>
     <p>Sustratos, macetas, mallas, sobres de curado e insumos para cultivo indoor y exterior.</p>
-    <a class="ver-todo" href="https://lyonmarket.cl/growshop" target="_blank" rel="noopener">Ver todo growshop</a>
+    <a class="ver-todo" href="catalogo.html?c=growshop">Ver todo growshop</a>
     <div class="riel__flechas">
       <button class="flecha" type="button" data-riel="riel-growshop" data-dir="-1" aria-label="Anteriores"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 6-6 6 6 6"/></svg></button>
       <button class="flecha" type="button" data-riel="riel-growshop" data-dir="1" aria-label="Siguientes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9.5 6 6 6-6 6"/></svg></button>
@@ -181,8 +163,34 @@
 </section>
 
 <section class="marcas" id="marcas" aria-labelledby="mar-titulo">
-  <h2 id="mar-titulo" class="sr">Marcas</h2>
-  <div class="marcas__cinta"><p id="cinta"></p></div>
+  <div class="marcas__cabeza">
+    <h2 id="mar-titulo">Nuestras marcas</h2>
+    <p>Las que tienes en el mostrador de Freire 659. Toca una y ves todo lo que tenemos de ella.</p>
+  </div>
+  <div class="marcas__pista" aria-label="Marcas con logo">
+    <ul class="marcas__fila" id="marcas-logos"></ul>
+  </div>
+  <div class="marcas__pista marcas__pista--vuelta" aria-label="Más marcas">
+    <ul class="marcas__fila" id="marcas-nombres"></ul>
+  </div>
+</section>
+
+<section class="despacho" aria-labelledby="desp-titulo">
+  <div class="despacho__texto">
+    <h2 id="desp-titulo">Compras antes de las 13:00, sale hoy.</h2>
+    <p>El courier retira los pedidos en el local a las 13:00, de lunes a viernes. Lo que compras después sale el siguiente día hábil. Si prefieres, lo retiras tú mismo con tu número de orden.</p>
+  </div>
+  <div class="dia" aria-label="Horario del día">
+    <div class="dia__barra">
+      <span class="dia__tramo dia__tramo--abierto" style="--a:11;--b:19"></span>
+      <span class="dia__corte" style="--h:13"><b>13:00</b> retiro del courier</span>
+      <span class="dia__ahora" id="dia-ahora"><b id="dia-hora">--:--</b></span>
+    </div>
+    <ol class="dia__marcas" aria-hidden="true">
+      <li style="--h:8">08</li><li style="--h:11">11</li><li style="--h:13">13</li><li style="--h:16">16</li><li style="--h:19">19</li><li style="--h:22">22</li>
+    </ol>
+    <p class="dia__estado" id="dia-estado" aria-live="polite"></p>
+  </div>
 </section>
 
 <section class="local" id="local" aria-labelledby="loc-titulo">
@@ -265,6 +273,7 @@
 <div class="aviso" id="aviso" role="status" aria-live="polite"></div>
 
 <script src="assets/productos.js"></script>
+<script src="assets/catalogo.js"></script>
 <script src="assets/pin-data.js"></script>
 <script src="vendor/three.min.js"></script>
 <script src="app.js"></script>

@@ -126,19 +126,26 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 .carro.pulso .carro__n { animation: pulso .6s var(--sale); }
 @keyframes pulso { 0% { transform: scale(1.7); box-shadow: 0 0 0 0 rgb(255 46 147 / .7); } 100% { transform: scale(1); box-shadow: 0 0 0 10px rgb(255 46 147 / 0); } }
 .menu-btn { display: none; }
+.carro.pulso svg { animation: trago .55s var(--sale); }
+@keyframes trago { 0% { transform: scale(1); } 35% { transform: scale(1.28) rotate(-8deg); } 100% { transform: scale(1); } }
+.vuelo { position: fixed; z-index: 60; pointer-events: none; }
+.vuelo img {
+  width: 100%; height: 100%; object-fit: contain; padding: 8%; border-radius: 18px; background: #fff;
+  box-shadow: 0 0 0 2px var(--ambar), 0 18px 40px -10px rgb(232 138 0 / .85);
+}
 
 /* Portada */
 .portada {
   position: relative; isolation: isolate; overflow: hidden;
-  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); align-items: center;
-  min-height: min(42rem, calc(100svh - 10.5rem));
+  display: grid; grid-template-columns: minmax(0, 31rem) minmax(0, 1fr); align-items: center;
+  min-height: min(50rem, calc(100svh - 7.5rem));
   touch-action: pan-y;
-  padding: clamp(2rem, 5vw, 4rem) var(--sangria);
+  padding: clamp(2rem, 5vw, 4rem) max(var(--sangria), calc(50vw - 39rem));
   background: radial-gradient(120% 90% at 72% 0%, #3a2610 0%, var(--grafito) 62%);
 }
 .portada__cono {
-  position: absolute; z-index: -1; inset: -10% -5% 0 38%;
-  background: radial-gradient(48% 62% at 50% 34%, rgb(255 178 26 / .42), rgb(255 140 0 / .12) 55%, transparent 75%);
+  position: absolute; z-index: -1; inset: -10% 0 0 0;
+  background: radial-gradient(34% 70% at calc(var(--cx, .7) * 100%) 36%, rgb(255 178 26 / .46), rgb(255 140 0 / .13) 55%, transparent 76%);
   filter: blur(8px);
   opacity: var(--lampara, 1);
 }
@@ -311,13 +318,48 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 .resenas blockquote + blockquote p { font-size: clamp(1.2rem, 2vw, 1.6rem); }
 .resenas footer { margin-top: 1rem; font-size: .9rem; color: #5b4a30; }
 
-/* Marcas */
-.marcas { background: var(--ambar); color: var(--tinta); }
-.marcas__cinta { padding: clamp(2.5rem, 5vw, 4rem) var(--sangria); }
-.marcas__cinta p { display: flex; flex-wrap: wrap; gap: .1em .45em; font: 800 clamp(1.7rem, 3.6vw, 3rem)/1.1 var(--display); font-variation-settings: "wdth" 75; letter-spacing: 0; }
-.marcas__cinta p a { white-space: nowrap; text-decoration: none; }
-.marcas__cinta p a:hover { text-decoration: underline; text-decoration-thickness: 3px; }
-.marcas__cinta p a:nth-child(3n+2) { color: var(--tinta-ambar); }
+/* Marcas: dos cintas que corren en sentido contrario; se detienen al pasar el puntero */
+.marcas {
+  padding: clamp(4rem, 7vw, 6rem) 0 clamp(3.5rem, 6vw, 5rem); overflow: hidden; color: var(--tinta);
+  background: radial-gradient(60% 70% at 50% 0%, rgb(255 190 70 / .4), transparent 70%), linear-gradient(180deg, #e9e3d6, var(--mylar) 55%, #cfcac0);
+}
+.marcas__cabeza { padding: 0 var(--sangria); margin-bottom: clamp(1.75rem, 3vw, 2.5rem); display: grid; gap: .75rem; }
+.marcas__cabeza h2 { font-size: clamp(2.1rem, 4.6vw, 3.6rem); }
+.marcas__cabeza p { color: #4a3d2c; max-width: 38rem; }
+.marcas__pista {
+  overflow: hidden; padding: .9rem 0;
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+.marcas__fila {
+  list-style: none; margin: 0; padding: 0; display: flex; gap: 1rem; width: max-content;
+  animation: cinta var(--dur, 40s) linear infinite;
+}
+.marcas__pista--vuelta .marcas__fila { animation-direction: reverse; }
+.marcas__pista:hover .marcas__fila, .marcas__pista:focus-within .marcas__fila { animation-play-state: paused; }
+@keyframes cinta { to { transform: translateX(calc(-50% - .5rem)); } }
+.logo {
+  display: grid; grid-template-rows: 1fr auto; width: 15rem; height: 11rem; padding: 1rem 1.1rem .9rem; border-radius: var(--radio);
+  text-decoration: none; color: var(--crema);
+  background: radial-gradient(55% 50% at 50% 42%, rgb(255 190 80 / .3), transparent 75%), radial-gradient(90% 80% at 50% 0%, rgb(255 178 26 / .12), transparent 70%), var(--grafito-2);
+  box-shadow: 0 1px 0 rgb(255 255 255 / .06) inset, 0 12px 26px -16px rgb(40 28 10 / .7);
+  transition: transform .5s var(--sale), box-shadow .5s var(--sale), background-color .3s;
+}
+.logo__img { display: grid; place-items: center; min-height: 0; }
+.logo__img img { max-height: 6.2rem; width: auto; max-width: 100%; object-fit: contain; transition: transform .6s var(--sale), filter .6s var(--sale); filter: drop-shadow(0 6px 10px rgb(0 0 0 / .45)); }
+.logo__pie { display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; padding-top: .55rem; border-top: 1px solid rgb(247 236 215 / .12); }
+.logo__pie b { font-size: .88rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.logo small { font-size: .78rem; color: var(--crema-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.logo:hover, .logo:focus-visible {
+  transform: translateY(-5px);
+  box-shadow: 0 1px 0 rgb(255 255 255 / .08) inset, 0 22px 40px -18px rgb(232 138 0 / .8), 0 0 0 2px var(--ambar);
+}
+.logo:hover .logo__img img { transform: scale(1.07) rotate(-1.5deg); }
+.logo--nombre { width: 13rem; height: 7.5rem; grid-template-rows: 1fr auto; align-items: center; }
+.logo__palabra {
+  font: 800 clamp(1.6rem, 2.4vw, 2.1rem)/1 var(--display); font-variation-settings: "wdth" 75; letter-spacing: -.01em;
+  color: var(--ambar); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.logo--nombre:nth-child(3n+2) .logo__palabra { color: var(--crema); }
 
 /* Local */
 .local {
@@ -441,9 +483,9 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
   .buscar input { font-size: .9rem; }
   .cabecera .icono[aria-label="Mi cuenta"] { display: none; }
   .portada { grid-template-columns: 1fr; align-items: end; min-height: auto; padding-top: 0; }
-  .portada__lienzo { height: 46vh; height: 46svh; bottom: auto; }
-  .portada__cono { inset: -10% -20% auto -20%; height: 60svh; }
-  .portada__texto { padding-top: 42svh; padding-bottom: 1rem; }
+  .portada__lienzo { height: 58vh; height: 58svh; bottom: auto; }
+  .portada__cono { inset: -10% -20% auto -20%; height: 70svh; }
+  .portada__texto { padding-top: 54svh; padding-bottom: 1rem; }
   .sin-3d .portada__respaldo { top: 1.5rem; right: 50%; translate: 50% 0; width: 62vw; }
   .categorias__lista a { padding: .8rem 1rem; min-height: 3rem; }
   .categorias__nombre { font-size: 1.15rem; }
@@ -459,4 +501,6 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+  .marcas__fila { animation: none !important; }
+  .marcas__pista { overflow-x: auto; }
 }
